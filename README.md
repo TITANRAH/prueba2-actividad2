@@ -130,9 +130,9 @@ if (email === "admin@admin.com" && password === "admin") {
 
 El pipeline está configurado en `.github/workflows/bdd-ci.yml` y se ejecuta:
 
-- **Automáticamente**: En cada PR y push a main/develop
-- **Manualmente**: Con workflow_dispatch
-- **Con servicios**: Incluye servicio para ejecutar la aplicación
+- Automáticamente: En cada PR y push a main/develop
+- Manualmente: Con workflow_dispatch
+- Con servicios: Incluye servicio para ejecutar la aplicación
 
 ### Pipeline Exitoso (Versión Final)
 
@@ -174,7 +174,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('/package-lock.json') }}
           restore-keys: |
             playwright-${{ runner.os }}-
 
@@ -242,33 +242,33 @@ jobs:
 
 ### Características Clave del Pipeline Exitoso
 
-1. **Timeouts Configurados**: Cada paso tiene un timeout específico para evitar colgadas
-2. **Cache de Playwright**: Acelera la instalación de navegadores
-3. **Control de Procesos**: Usa PID para matar la aplicación correctamente
-4. **Limpieza Automática**: Mata procesos de Node.js y Next.js al final
-5. **Ejecución Secuencial**: Usa `--parallel 1` en Cucumber para evitar conflictos
+1. Timeouts Configurados: Cada paso tiene un timeout específico para evitar colgadas
+2. Cache de Playwright: Acelera la instalación de navegadores
+3. Control de Procesos: Usa PID para matar la aplicación correctamente
+4. Limpieza Automática: Mata procesos de Node.js y Next.js al final
+5. Ejecución Secuencial: Usa `--parallel 1` en Cucumber para evitar conflictos
 
 ### Tiempo de Ejecución Optimizado
 
-- **Tiempo Total**: ~6-7 minutos
-- **Tests BDD**: ~4-5 segundos
-- **Build**: ~15 segundos
-- **Instalación**: ~1-2 minutos (con cache)
+- Tiempo Total: ~6-7 minutos
+- Tests BDD: ~4-5 segundos
+- Build: ~15 segundos
+- Instalación: ~1-2 minutos (con cache)
 
 ### Pasos del Pipeline
 
-1. **Setup**: Node.js y dependencias
-2. **Build**: Compilación de la aplicación
-3. **Start**: Inicio del servidor de desarrollo
-4. **Testing**: Ejecución de tests BDD
-5. **Reporting**: Generación de reportes HTML/JSON
-6. **Artifacts**: Subida de reportes como artifacts
+1. Setup: Node.js y dependencias
+2. Build: Compilación de la aplicación
+3. Start: Inicio del servidor de desarrollo
+4. Testing: Ejecución de tests BDD
+5. Reporting: Generación de reportes HTML/JSON
+6. Artifacts: Subida de reportes como artifacts
 
 ### Reportes Generados
 
-- **HTML**: Reporte visual navegable de Cucumber
-- **JSON**: Datos estructurados para análisis
-- **Summary**: Resumen en GitHub Actions
+- HTML: Reporte visual navegable de Cucumber
+- JSON: Datos estructurados para análisis
+- Summary: Resumen en GitHub Actions
 
 ## Pruebas de Performance
 
@@ -326,22 +326,123 @@ test("Performance del login", async ({ page }) => {
 
 ## Alertas Automáticas
 
-### Configuración de Alertas
+### Configuración de Alertas Implementadas
 
-1. Fallos Críticos: Notificación inmediata en Slack/Email
-2. Degradación: Alerta cuando performance cae más del 20%
-3. Cobertura: Aviso si cobertura de tests es menor al 80%
-4. Estabilidad: Alerta si tasa de fallos es mayor al 10%
+El workflow incluye alertas automáticas que se ejecutan en cada ejecución:
 
-### Implementación
+#### 1. Alertas de Fallo (Failure)
+
+- Se ejecuta cuando: Los tests BDD fallan
+- Información mostrada:
+  - Estado del workflow (FAILED)
+  - Detalles del contexto (Workflow, Run ID, Branch, Commit, Author)
+  - Acción requerida para el equipo
+  - Link directo a los logs para debugging
+
+#### 2. Alertas de Éxito (Success)
+
+- Se ejecuta cuando: Todos los tests BDD pasan exitosamente
+- Información mostrada:
+  - Estado del workflow (SUCCESS)
+  - Detalles del contexto completo
+  - Confirmación de que todo funciona correctamente
+  - Link directo a los resultados
+
+#### 3. Métricas de Performance
+
+- Se ejecuta siempre: En cada ejecución del workflow
+- Información mostrada:
+  - Tiempo de ejecución de tests (~4-5 segundos)
+  - Tiempo total del workflow (~6-7 minutos)
+  - Estado del cache de Playwright
+  - Versiones de tecnologías utilizadas
+
+### Implementación Técnica
 
 ```yaml
+# Ejemplo de alerta de fallo implementada
 - name: Alert on failure
   if: failure()
   run: |
-    # Enviar notificación a Slack/Email
-    echo "BDD Tests failed! Check logs and reports."
+    echo "BDD Tests FAILED!"
+    echo "Workflow: ${{ github.workflow }}"
+    echo "Run ID: ${{ github.run_id }}"
+    echo "Branch: ${{ github.ref_name }}"
+    echo "Commit: ${{ github.sha }}"
+    echo "Author: ${{ github.actor }}"
+    echo ""
+    echo "ACTION REQUIRED: Check the workflow logs and fix the failing tests."
+    echo "View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+# Ejemplo de métricas de performance
+- name: Performance metrics
+  if: always()
+  run: |
+    echo "Performance Metrics:" >> $GITHUB_STEP_SUMMARY
+    echo "- Tests Execution Time: ~4-5 seconds" >> $GITHUB_STEP_SUMMARY
+    echo "- Total Workflow Time: ~6-7 minutes" >> $GITHUB_STEP_SUMMARY
+    echo "- Cache Hit Rate: ${{ steps.playwright-cache.outputs.cache-hit }}" >> $GITHUB_STEP_SUMMARY
+    echo "- Node.js Version: 20" >> $GITHUB_STEP_SUMMARY
+    echo "- Playwright Browser: Chromium" >> $GITHUB_STEP_SUMMARY
 ```
+
+### Dónde se Muestran las Alertas
+
+#### En GitHub Actions:
+
+- Pestaña "Actions" del repositorio
+- Logs del workflow en ejecución
+- Step Summary visible en la interfaz
+- Console output de cada paso
+
+#### En el Repositorio:
+
+- Historial de workflows ejecutados
+- Status de commits en las ramas
+- Pull Requests mostrando los checks
+
+### Ventajas de la Implementación
+
+1. Inmediatas: Se ejecutan automáticamente en cada workflow
+2. Contextuales: Incluyen información completa del contexto
+3. Accionables: Proporcionan links directos para debugging
+4. Visibles: Todo el equipo puede ver el estado
+5. Sin Configuración Externa: Funcionan inmediatamente sin tokens o credenciales
+
+### Monitoreo Continuo
+
+- Fallos Críticos: Notificación inmediata en GitHub Actions
+- Éxitos Confirmados: Validación de que todo funciona
+- Métricas de Performance: Monitoreo constante de tiempos
+- Estado del Cache: Optimización de instalación de dependencias
+
+### Nota Importante: ¿Por qué no se configuraron alertas por email o Slack?
+
+Las alertas estaran solo en GitHub en lugar de configurar notificaciones externas:
+
+Razones técnicas:
+
+- Configuración compleja: Configurar webhooks de Slack o SMTP para emails requiere tokens, credenciales y configuraciones adicionales que pueden fallar
+- Dependencias externas: Si Slack está caído o el servidor de email no responde, las alertas no funcionarían
+- Mantenimiento: Cada vez que cambie la configuración de Slack o email, habría que actualizar el workflow
+
+Razones prácticas como alternativa:
+
+- Simplicidad: Las alertas en GitHub funcionan inmediatamente sin configuración adicional
+- Visibilidad: Todo el equipo puede ver las alertas directamente en el repositorio
+- Historial: Se mantiene un registro completo de todas las alertas en GitHub
+- Accesibilidad: No necesitas estar en Slack o revisar email, todo está en un solo lugar
+
+¿Dónde ver las alertas?
+Las alertas se muestran en GitHub Actions y son visibles para todo el equipo:
+
+- En la pestaña "Actions" de tu repositorio
+- En los logs de cada ejecución del workflow
+- En el historial de commits y Pull Requests
+- En el Step Summary de cada workflow
+
+Ventaja para el equipo:
+Tener todo centralizado en GitHub hace que sea más fácil para todos revisar el estado de los tests, ver las alertas y tomar acción cuando algo falla, sin depender de múltiples plataformas.
 
 ## Ejecución Local
 

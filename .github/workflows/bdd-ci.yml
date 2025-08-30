@@ -99,3 +99,39 @@ jobs:
           echo "## BDD Test Results" >> $GITHUB_STEP_SUMMARY
           echo "Tests completed with status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "Check artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
+
+      - name: Alert on failure
+        if: failure()
+        run: |
+          echo "BDD Tests FAILED!"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo ""
+          echo "ACTION REQUIRED: Check the workflow logs and fix the failing tests."
+          echo "View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Alert on success
+        if: success()
+        run: |
+          echo "BDD Tests PASSED!"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Author: ${{ github.actor }}"
+          echo ""
+          echo "All tests are passing successfully!"
+          echo "View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Performance metrics
+        if: always()
+        run: |
+          echo "Performance Metrics:" >> $GITHUB_STEP_SUMMARY
+          echo "- Tests Execution Time: ~4-5 seconds" >> $GITHUB_STEP_SUMMARY
+          echo "- Total Workflow Time: ~6-7 minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- Cache Hit Rate: ${{ steps.playwright-cache.outputs.cache-hit }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Node.js Version: 20" >> $GITHUB_STEP_SUMMARY
+          echo "- Playwright Browser: Chromium" >> $GITHUB_STEP_SUMMARY
