@@ -57,6 +57,7 @@ taller-actividad2/
 - Credenciales inválidas: test@test.com / wrongpass
 - Formato inválido: invalid@email / admin
 
+
 ## Escenarios BDD en Gherkin
 
 ### Feature: Login de Usuario
@@ -88,6 +89,199 @@ Feature: Login de usuario
       | invalid@email      | admin       |
 ```
 
+### Ejecución Local de Tests BDD
+
+Los escenarios se ejecutan localmente usando Cucumber con Playwright:
+
+![Tests BDD Ejecutándose Localmente](./public/local-test-cucumber-executed.png)
+
+## Implementación Técnica BDD
+
+### Step Definitions (Cucumber + Playwright)
+
+Los step definitions implementan la lógica de cada paso Gherkin usando Playwright para automatizar el navegador:
+
+```typescript
+import { Given, When, Then } from "@cucumber/cucumber";
+import assert from "assert";
+import { chromium, Browser, Page, BrowserContext } from "playwright";
+
+let browser: Browser;
+let context: BrowserContext;
+let page: Page;
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+
+Given("estoy en la página de {string}", async (path: string) => {
+  if (!browser) {
+    browser = await chromium.launch();
+  }
+  context = await browser.newContext();
+  page = await context.newPage();
+  await page.goto(`${BASE_URL}/${path}`);
+});
+
+When("ingreso el email {string}", async (email: string) => {
+  await page.fill('input[name="email"]', email);
+});
+
+When("ingreso la contraseña {string}", async (pwd: string) => {
+  await page.fill('input[name="password"]', pwd);
+});
+
+When("presiono el botón {string}", async (label: string) => {
+  await page.getByRole("button", { name: label }).click();
+});
+
+Then("soy redirigido a {string}", async (expectedPath: string) => {
+  await page.waitForURL(`${expectedPath}`);
+  const url = page.url();
+  assert.ok(url.endsWith(expectedPath), `URL actual: ${url}`);
+});
+
+Then("veo el texto {string}", async (text: string) => {
+  await page.waitForLoadState("networkidle");
+  const locator = page.getByText(text, { exact: false });
+  await locator.waitFor({ state: "visible", timeout: 4000 });
+  const visible = await locator.isVisible();
+  assert.strictEqual(visible, true, `No se ve el texto: ${text}`);
+});
+```
+
+### Hooks de Configuración
+
+Los hooks configuran el navegador compartido para optimizar la ejecución:
+
+```typescript
+import { AfterAll, BeforeAll } from "@cucumber/cucumber";
+import { chromium, Browser } from "playwright";
+
+let sharedBrowser: Browser;
+
+BeforeAll(async () => {
+  sharedBrowser = await chromium.launch();
+});
+
+AfterAll(async () => {
+  await sharedBrowser?.close();
+});
+```
+
+### Explicación de la Implementación
+
+- Given: Navega a la página especificada y prepara el navegador
+- When: Ejecuta acciones del usuario (llenar campos, hacer clic)
+- Then: Verifica resultados (redirecciones, texto visible)
+- Hooks: Gestionan el ciclo de vida del navegador
+- Playwright: Automatiza Chromium de forma headless
+- Assertions: Valida que el comportamiento sea el esperado
+
+### Reporte HTML de Cucumber
+
+Después de ejecutar los tests, se genera un reporte HTML navegable:
+
+![Reporte HTML de Cucumber](./public/cucumber-report.png)
+
+## Instalación y Configuración
+
+### Prerrequisitos
+
+- Node.js 20 o superior
+- npm o yarn
+- Git
+
+### Pasos de Instalación
+
+1. Clonar el repositorio:
+
+```bash
+git clone <url-del-repositorio>
+cd taller-actividad2
+```
+
+2. Instalar dependencias del proyecto:
+
+```bash
+npm install
+```
+
+3. Instalar herramientas de testing (si no están incluidas):
+
+#### Cucumber.js (Framework BDD)
+
+```bash
+npm install --save-dev @cucumber/cucumber
+```
+
+#### Playwright (Automatización de Navegador)
+
+```bash
+npm install --save-dev playwright
+npx playwright install --with-deps chromium
+```
+
+#### ts-node (Ejecutar TypeScript)
+
+```bash
+npm install --save-dev ts-node
+```
+
+#### start-server-and-test (Servidor + Tests)
+
+```bash
+npm install --save-dev start-server-and-test
+```
+
+#### Dependencias de TypeScript
+
+```bash
+npm install --save-dev typescript @types/node
+```
+
+#### Comando de Instalación Completa
+
+```bash
+npm install --save-dev @cucumber/cucumber playwright ts-node start-server-and-test typescript @types/node
+```
+
+4. Configurar variables de entorno (opcional):
+
+```bash
+# Crear archivo .env.local
+BASE_URL=http://localhost:3000
+```
+
+### Ejecución Local
+
+1. Ejecutar en modo desarrollo:
+
+```bash
+npm run dev
+```
+
+2. Ejecutar tests BDD localmente (recomendado):
+
+```bash
+npm run test:bdd:local
+```
+
+3. Ejecutar tests BDD manualmente:
+
+```bash
+# Terminal 1: Iniciar aplicación
+npm run dev
+
+# Terminal 2: Ejecutar tests
+npm run bdd
+```
+
+### Scripts Disponibles
+
+- `npm run dev` - Inicia la aplicación en modo desarrollo
+- `npm run build` - Construye la aplicación para producción
+- `npm run start` - Inicia la aplicación en modo producción
+- `npm run bdd` - Ejecuta los tests BDD (requiere servidor corriendo)
+- `npm run test:bdd:local` - Ejecuta tests BDD con servidor automático
+
 ## Implementación Técnica
 
 ### Tecnologías Utilizadas
@@ -96,6 +290,12 @@ Feature: Login de usuario
 - Testing: Cucumber.js + Playwright
 - CI/CD: GitHub Actions
 - Styling: Tailwind CSS
+
+### Código de la Funcionalidad
+
+La función de login implementada en la API:
+
+![Función de Login](./public/code-function-login.png)
 
 ### Step Definitions
 
@@ -133,6 +333,12 @@ El pipeline está configurado en `.github/workflows/bdd-ci.yml` y se ejecuta:
 - Automáticamente: En cada PR y push a main/develop
 - Manualmente: Con workflow_dispatch
 - Con servicios: Incluye servicio para ejecutar la aplicación
+
+### Pipeline en Acción
+
+El workflow de GitHub Actions se ejecuta automáticamente:
+
+![Pipeline de GitHub Actions](./public/actions-pipeline.png)
 
 ### Pipeline Exitoso (Versión Final)
 
@@ -360,7 +566,7 @@ El workflow incluye alertas automáticas que se ejecutan en cada ejecución:
 ### Implementación Técnica
 
 ```yaml
-# Ejemplo de alerta de fallo implementada
+
 - name: Alert on failure
   if: failure()
   run: |
@@ -374,7 +580,7 @@ El workflow incluye alertas automáticas que se ejecutan en cada ejecución:
     echo "ACTION REQUIRED: Check the workflow logs and fix the failing tests."
     echo "View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-# Ejemplo de métricas de performance
+
 - name: Performance metrics
   if: always()
   run: |
@@ -384,7 +590,78 @@ El workflow incluye alertas automáticas que se ejecutan en cada ejecución:
     echo "- Cache Hit Rate: ${{ steps.playwright-cache.outputs.cache-hit }}" >> $GITHUB_STEP_SUMMARY
     echo "- Node.js Version: 20" >> $GITHUB_STEP_SUMMARY
     echo "- Playwright Browser: Chromium" >> $GITHUB_STEP_SUMMARY
+
+### Checks del Pipeline
+
+Los tests se ejecutan y se muestran como checks en el Pull Request:
+
+![Checks del Pipeline](./public/action-pipeline-check.png)
 ```
+
+## Flujo de Git y Branch Protection
+
+### Rama Main Protegida
+
+La rama main está configurada con reglas de protección que requieren que los tests pasen antes de permitir merge:
+
+![Rama Main Protegida](./public/action-main-protected.png)
+
+### Proceso de Desarrollo
+
+1. **Crear rama desde main:**
+
+```bash
+git checkout -b feature/nueva-funcionalidad
+```
+
+2. **Desarrollar y hacer commit:**
+
+```bash
+git add .
+git commit -m "Agregar nueva funcionalidad"
+git push origin feature/nueva-funcionalidad
+```
+
+3. **Crear Pull Request hacia main**
+
+4. **Pipeline se ejecuta automáticamente**
+
+5. **Merge solo si tests pasan**
+
+### Logs de Consola del Proceso
+
+#### Creación de Rama
+
+```bash
+git checkout -b feature/nueva-funcionalidad
+```
+
+![Creación de Rama](./public/console-log-create-branch.png)
+
+#### Push a Rama
+
+```bash
+git push origin feature/nueva-funcionalidad
+```
+
+![Push a Rama](./public/console-log-push.png)
+
+#### Estado Antes del PR
+
+```bash
+git status
+```
+
+![Estado Antes del PR](./public/console-log-pre-merge-request.png)
+
+#### PR Mergeado Exitosamente
+
+```bash
+git checkout main
+git pull origin main
+```
+
+![PR Mergeado](./public/console-log-merged.png)
 
 ### Dónde se Muestran las Alertas
 
@@ -528,7 +805,6 @@ Para documentar completamente la Actividad 2, se requieren las siguientes captur
 4. Branch Protection Rules: Captura de la configuración en GitHub
 5. Pull Request con Checks: Captura del PR mostrando los status checks
 
-Estas capturas deben ser incluidas en el repositorio en la carpeta `public/` y referenciadas en este README.
 
 ## Recursos Adicionales
 
