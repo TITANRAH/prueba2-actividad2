@@ -57,7 +57,6 @@ taller-actividad2/
 - Credenciales inválidas: test@test.com / wrongpass
 - Formato inválido: invalid@email / admin
 
-![Ejemplos de Criterios de Aceptación](./public/icon_coffee.svg)
 
 ## Escenarios BDD en Gherkin
 
