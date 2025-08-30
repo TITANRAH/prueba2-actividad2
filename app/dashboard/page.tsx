@@ -1,5 +1,3 @@
-"use client";
-
 export default function DashboardPage() {
   return (
     <main className="max-w-420 mx-auto font-system-ui flex flex-col items-center justify-center h-screen">

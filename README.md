@@ -37,8 +37,8 @@ taller-actividad2/
 
 ### Roles y Responsabilidades
 
-| Rol               | Responsabilidad                              | Participante            |
-| ----------------- | -------------------------------------------- | ----------------------- |
+| Rol           | Responsabilidad                              | Participante            |
+| ------------- | -------------------------------------------- | ----------------------- |
 | Product Owner | Define criterios de aceptación y prioridades | Stakeholder del negocio |
 | Developer     | Implementa la funcionalidad técnica          | Equipo de desarrollo    |
 | QA/Tester     | Define escenarios de prueba y casos edge     | Equipo de calidad       |
@@ -130,24 +130,145 @@ if (email === "admin@admin.com" && password === "admin") {
 
 El pipeline está configurado en `.github/workflows/bdd-ci.yml` y se ejecuta:
 
-- Automáticamente: En cada PR y push a main/develop
-- Manualmente: Con workflow_dispatch
-- Con servicios: Incluye servicio para ejecutar la aplicación
+- **Automáticamente**: En cada PR y push a main/develop
+- **Manualmente**: Con workflow_dispatch
+- **Con servicios**: Incluye servicio para ejecutar la aplicación
+
+### Pipeline Exitoso (Versión Final)
+
+```yaml
+name: BDD CI Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bdd-tests:
+    name: BDD Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Install Playwright browsers (cached)
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+        timeout-minutes: 3
+
+      - name: Build application
+        run: npm run build
+        timeout-minutes: 3
+
+      - name: Start application
+        run: |
+          npm start &
+          echo $! > app.pid
+        env:
+          PORT: 3000
+        timeout-minutes: 2
+
+      - name: Wait for app to be ready
+        run: |
+          sleep 15
+          curl -f http://localhost:3000 || exit 1
+        timeout-minutes: 2
+
+      - name: Run BDD tests
+        run: npm run bdd
+        env:
+          BASE_URL: http://localhost:3000
+        timeout-minutes: 5
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+            rm app.pid
+          fi
+          # Limpiar procesos de Node.js
+          pkill -f "next" || true
+          pkill -f "node" || true
+
+      - name: Upload Cucumber HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cucumber-html-report
+          path: tests/reports/cucumber-report.html
+
+      - name: Upload Cucumber JSON report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cucumber-json-report
+          path: tests/reports/cucumber-report.json
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "## BDD Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Tests completed with status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "Check artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
+```
+
+### Características Clave del Pipeline Exitoso
+
+1. **Timeouts Configurados**: Cada paso tiene un timeout específico para evitar colgadas
+2. **Cache de Playwright**: Acelera la instalación de navegadores
+3. **Control de Procesos**: Usa PID para matar la aplicación correctamente
+4. **Limpieza Automática**: Mata procesos de Node.js y Next.js al final
+5. **Ejecución Secuencial**: Usa `--parallel 1` en Cucumber para evitar conflictos
+
+### Tiempo de Ejecución Optimizado
+
+- **Tiempo Total**: ~6-7 minutos
+- **Tests BDD**: ~4-5 segundos
+- **Build**: ~15 segundos
+- **Instalación**: ~1-2 minutos (con cache)
 
 ### Pasos del Pipeline
 
-1. Setup: Node.js y dependencias
-2. Build: Compilación de la aplicación
-3. Start: Inicio del servidor de desarrollo
-4. Testing: Ejecución de tests BDD
-5. Reporting: Generación de reportes HTML/JSON
-6. Artifacts: Subida de reportes como artifacts
+1. **Setup**: Node.js y dependencias
+2. **Build**: Compilación de la aplicación
+3. **Start**: Inicio del servidor de desarrollo
+4. **Testing**: Ejecución de tests BDD
+5. **Reporting**: Generación de reportes HTML/JSON
+6. **Artifacts**: Subida de reportes como artifacts
 
 ### Reportes Generados
 
-- HTML: Reporte visual navegable de Cucumber
-- JSON: Datos estructurados para análisis
-- Summary: Resumen en GitHub Actions
+- **HTML**: Reporte visual navegable de Cucumber
+- **JSON**: Datos estructurados para análisis
+- **Summary**: Resumen en GitHub Actions
 
 ## Pruebas de Performance
 
@@ -165,7 +286,7 @@ Para las pruebas de performance básicas, utilizamos Playwright con capacidades 
 ### Implementación de Performance Tests
 
 ```typescript
-// Ejemplo de test de performance con Playwright
+// Ejemplo de test de performance con Playwright enteindo que después usaremos Selenium
 test("Performance del login", async ({ page }) => {
   const startTime = Date.now();
 
@@ -323,4 +444,3 @@ Estas capturas deben ser incluidas en el repositorio en la carpeta `public/` y r
 4. Ejecutar tests localmente
 5. Crear Pull Request
 6. Esperar aprobación de CI
-
