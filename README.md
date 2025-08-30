@@ -1,36 +1,326 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Taller Actividad 2 - BDD con Cucumber y Playwright
 
-## Getting Started
+## Descripción del Proyecto
 
-First, run the development server:
+Este proyecto implementa Behavior Driven Development (BDD) utilizando Cucumber para la definición de escenarios y Playwright para la automatización de pruebas. La funcionalidad implementada es un sistema de login con validación de credenciales.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Objetivos de la Actividad
+
+- Simular sesión 'Three Amigos' para definir funcionalidad
+- Implementar escenarios BDD en Gherkin
+- Crear step definitions con Playwright
+- Integrar BDD en pipeline CI/CD
+- Generar reportes navegables
+- Implementar pruebas de performance básicas
+- Configurar métricas y alertas
+
+## Arquitectura del Proyecto
+
+```
+taller-actividad2/
+├── app/
+│   ├── login/page.tsx          # Página de login
+│   ├── dashboard/page.tsx      # Página de dashboard
+│   └── api/login/route.ts      # API de autenticación
+├── tests/
+│   ├── features/
+│   │   └── login.feature       # Escenarios BDD en Gherkin
+│   ├── steps/
+│   │   └── login.steps.ts      # Step definitions
+│   └── reports/                # Reportes generados
+├── .github/workflows/
+│   └── bdd-ci.yml             # Pipeline CI para BDD
+└── package.json
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Sesión Three Amigos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Roles y Responsabilidades
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Rol               | Responsabilidad                              | Participante            |
+| ----------------- | -------------------------------------------- | ----------------------- |
+| Product Owner | Define criterios de aceptación y prioridades | Stakeholder del negocio |
+| Developer     | Implementa la funcionalidad técnica          | Equipo de desarrollo    |
+| QA/Tester     | Define escenarios de prueba y casos edge     | Equipo de calidad       |
 
-## Learn More
+### Criterios de Aceptación
 
-To learn more about Next.js, take a look at the following resources:
+1. Login Exitoso: Usuario con credenciales válidas debe acceder al dashboard
+2. Login Fallido: Usuario con credenciales inválidas debe ver mensaje de error
+3. Validación: Sistema debe validar email y contraseña antes de procesar
+4. Feedback: Usuario debe recibir feedback visual inmediato
+5. Seguridad: Credenciales incorrectas no deben permitir acceso
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Ejemplos Discutidos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Credenciales válidas: admin@admin.com / admin
+- Credenciales inválidas: test@test.com / wrongpass
+- Formato inválido: invalid@email / admin
 
-## Deploy on Vercel
+## Escenarios BDD en Gherkin
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Feature: Login de Usuario
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```gherkin
+Feature: Login de usuario
+
+  Background:
+    Given estoy en la página de "login"
+
+  Scenario: Login exitoso con credenciales válidas
+    When ingreso el email "admin@admin.com"
+    And ingreso la contraseña "admin"
+    And presiono el botón "Ingresar"
+    Then soy redirigido a "/dashboard"
+    And veo el texto "¡Bienvenido!"
+
+  Scenario Outline: Login inválido
+    When ingreso el email "<email>"
+    And ingreso la contraseña "<password>"
+    And presiono el botón "Ingresar"
+    Then permanezco en "/login"
+    And veo el texto "Credenciales inválidas"
+
+    Examples:
+      | email              | password    |
+      | test@test.com      | wrongpass   |
+      | admin@admin.com    | wrongpass   |
+      | invalid@email      | admin       |
+```
+
+## Implementación Técnica
+
+### Tecnologías Utilizadas
+
+- Frontend: Next.js 15 + React + TypeScript
+- Testing: Cucumber.js + Playwright
+- CI/CD: GitHub Actions
+- Styling: Tailwind CSS
+
+### Step Definitions
+
+Los step definitions están implementados en `tests/steps/login.steps.ts` utilizando Playwright para:
+
+- Navegación entre páginas
+- Interacción con formularios
+- Validación de contenido
+- Manejo de timeouts y errores
+
+### API de Login
+
+La API implementa validación de credenciales:
+
+```typescript
+if (email === "admin@admin.com" && password === "admin") {
+  return NextResponse.json(
+    { success: true, message: "Login exitoso" },
+    { status: 200 }
+  );
+} else {
+  return NextResponse.json(
+    { success: false, message: "Credenciales inválidas" },
+    { status: 401 }
+  );
+}
+```
+
+## Pipeline CI/CD
+
+### Configuración del Workflow
+
+El pipeline está configurado en `.github/workflows/bdd-ci.yml` y se ejecuta:
+
+- Automáticamente: En cada PR y push a main/develop
+- Manualmente: Con workflow_dispatch
+- Con servicios: Incluye servicio para ejecutar la aplicación
+
+### Pasos del Pipeline
+
+1. Setup: Node.js y dependencias
+2. Build: Compilación de la aplicación
+3. Start: Inicio del servidor de desarrollo
+4. Testing: Ejecución de tests BDD
+5. Reporting: Generación de reportes HTML/JSON
+6. Artifacts: Subida de reportes como artifacts
+
+### Reportes Generados
+
+- HTML: Reporte visual navegable de Cucumber
+- JSON: Datos estructurados para análisis
+- Summary: Resumen en GitHub Actions
+
+## Pruebas de Performance
+
+### Herramienta Utilizada
+
+Para las pruebas de performance básicas, utilizamos Playwright con capacidades integradas de medición de tiempo.
+
+### Indicadores Monitoreados
+
+- Response Time: Tiempo de respuesta de la API de login
+- Page Load Time: Tiempo de carga de las páginas
+- Navigation Time: Tiempo entre navegaciones
+- Memory Usage: Uso de memoria durante la ejecución
+
+### Implementación de Performance Tests
+
+```typescript
+// Ejemplo de test de performance con Playwright
+test("Performance del login", async ({ page }) => {
+  const startTime = Date.now();
+
+  await page.goto("/login");
+  await page.fill('input[name="email"]', "admin@admin.com");
+  await page.fill('input[name="password"]', "admin");
+  await page.click('button:has-text("Ingresar")');
+
+  await page.waitForURL("/dashboard");
+  const endTime = Date.now();
+
+  const totalTime = endTime - startTime;
+  console.log(`Tiempo total del login: ${totalTime}ms`);
+
+  expect(totalTime).toBeLessThan(3000);
+});
+```
+
+## Métricas y Monitoreo
+
+### Métricas de Pruebas Funcionales
+
+- Tasa de Éxito: Porcentaje de tests que pasan
+- Tiempo de Ejecución: Duración total de la suite
+- Cobertura de Escenarios: Escenarios cubiertos vs. totales
+- Estabilidad: Consistencia entre ejecuciones
+
+### Dashboard del Pipeline
+
+```yaml
+- name: Generate test summary
+  run: |
+    echo "## BDD Test Results" >> $GITHUB_STEP_SUMMARY
+    echo "Tests completed with status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+    echo "Check artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
+```
+
+## Alertas Automáticas
+
+### Configuración de Alertas
+
+1. Fallos Críticos: Notificación inmediata en Slack/Email
+2. Degradación: Alerta cuando performance cae más del 20%
+3. Cobertura: Aviso si cobertura de tests es menor al 80%
+4. Estabilidad: Alerta si tasa de fallos es mayor al 10%
+
+### Implementación
+
+```yaml
+- name: Alert on failure
+  if: failure()
+  run: |
+    # Enviar notificación a Slack/Email
+    echo "BDD Tests failed! Check logs and reports."
+```
+
+## Ejecución Local
+
+### Prerrequisitos
+
+- Node.js 20+
+- npm o yarn
+- Navegador compatible con Playwright
+
+### Comandos
+
+```bash
+npm install
+
+# Ejecutar tests BDD
+npm run bdd
+
+# Ejecutar aplicación en desarrollo
+npm run dev
+
+# Build de producción
+npm run build
+```
+
+### Estructura de Comandos
+
+```json
+{
+  "scripts": {
+    "bdd": "cucumber-js tests/features --require-module ts-node/register --require tests/steps//*.ts --require tests/support//*.ts --format progress --format html:tests/reports/cucumber-report.html --format json:tests/reports/cucumber-report.json",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  }
+}
+```
+
+## Buenas Prácticas Implementadas
+
+### Atomicidad de Tests
+
+- Cada escenario es independiente
+- Limpieza de estado entre tests
+- Uso de Background para setup común
+
+### Trabajo Colaborativo
+
+- Commits frecuentes con mensajes claros
+- Pull requests con descripción detallada
+- Code review obligatorio
+- Tests automáticos antes del merge
+
+### Automatización
+
+- Pipeline CI/CD automático
+- Generación automática de reportes
+- Notificaciones automáticas de fallos
+- Deployment automático en main
+
+## Troubleshooting
+
+### Problemas Comunes
+
+1. Tests fallan por timing: Aumentar timeouts en step definitions
+2. API no responde: Verificar que el servidor esté corriendo
+3. Playwright no encuentra elementos: Revisar selectores y estado de la página
+4. Pipeline falla: Verificar logs de GitHub Actions
+
+### Soluciones
+
+- Usar `waitFor` con timeouts apropiados
+- Implementar health checks en la API
+- Agregar logs detallados en step definitions
+- Revisar configuración de servicios en CI
+
+## Capturas de Pantalla y Evidencia
+
+Para documentar completamente la Actividad 2, se requieren las siguientes capturas de pantalla:
+
+1. Ejecución Local de Tests: Captura de la terminal mostrando tests pasando
+2. Pipeline CI en GitHub: Captura del workflow ejecutándose
+3. Reportes de Cucumber: Captura del reporte HTML generado
+4. Branch Protection Rules: Captura de la configuración en GitHub
+5. Pull Request con Checks: Captura del PR mostrando los status checks
+
+Estas capturas deben ser incluidas en el repositorio en la carpeta `public/` y referenciadas en este README.
+
+## Recursos Adicionales
+
+- [Cucumber.js Documentation](https://cucumber.io/docs/cucumber/api/)
+- [Playwright Testing](https://playwright.dev/docs/intro)
+- [GitHub Actions](https://docs.github.com/en/actions)
+- [BDD Best Practices](https://cucumber.io/docs/bdd/)
+
+## Contribución
+
+1. Fork del repositorio
+2. Crear feature branch
+3. Implementar cambios
+4. Ejecutar tests localmente
+5. Crear Pull Request
+6. Esperar aprobación de CI
+
