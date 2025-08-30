@@ -1,4 +1,4 @@
-# Taller Actividad 2 - BDD con Cucumber y Playwright
+# Actividad 2
 
 ## Descripción del Proyecto
 
