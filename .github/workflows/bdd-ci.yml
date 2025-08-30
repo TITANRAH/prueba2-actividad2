@@ -14,6 +14,7 @@ jobs:
   bdd-tests:
     name: BDD Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout code
@@ -27,9 +28,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        timeout-minutes: 5
 
       - name: Install Playwright browsers (cached)
         uses: actions/cache@v4
+        id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
@@ -39,25 +42,45 @@ jobs:
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
+        timeout-minutes: 3
 
       - name: Build application
         run: npm run build
+        timeout-minutes: 3
 
       - name: Start application
-        run: npm start &
+        run: |
+          npm start &
+          echo $! > app.pid
         env:
           PORT: 3000
+        timeout-minutes: 2
 
       - name: Wait for app to be ready
         run: |
           sleep 15
           curl -f http://localhost:3000 || exit 1
+        timeout-minutes: 2
 
       - name: Run BDD tests
-        run: npm run bdd
+        run: |
+          npm run bdd
+          # Limpiar procesos de Playwright
+          pkill -f playwright || true
         env:
           BASE_URL: http://localhost:3000
         timeout-minutes: 5
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f app.pid ]; then
+            kill $(cat app.pid) || true
+            rm app.pid
+          fi
+          # Limpiar procesos de Node.js
+          pkill -f "next" || true
+          pkill -f "node" || true
 
       - name: Upload Cucumber HTML report
         uses: actions/upload-artifact@v4
