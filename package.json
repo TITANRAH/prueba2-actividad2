@@ -7,7 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "bdd": "cucumber-js tests/features --require-module ts-node/register --require tests/steps/**/*.ts --require tests/support/**/*.ts --format progress --format html:tests/reports/cucumber-report.html --format json:tests/reports/cucumber-report.json",
+    "bdd": "cucumber-js tests/features --require-module ts-node/register --require tests/steps/**/*.ts --require tests/support/**/*.ts --format progress --format html:tests/reports/cucumber-report.html --format json:tests/reports/cucumber-report.json --parallel 1",
     "test:bdd:local": "start-server-and-test dev http://localhost:3000 'npm run bdd'"
   },
   "dependencies": {

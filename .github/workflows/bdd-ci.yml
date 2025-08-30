@@ -63,10 +63,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Run BDD tests
-        run: |
-          npm run bdd
-          # Limpiar procesos de Playwright
-          pkill -f playwright || true
+        run: npm run bdd
         env:
           BASE_URL: http://localhost:3000
         timeout-minutes: 5
